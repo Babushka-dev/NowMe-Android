@@ -1,11 +1,13 @@
 package com.example.nowme.ui.home;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
@@ -40,12 +42,13 @@ public class HomeFragment extends Fragment {
     private FeedAdapter adapter;
     private HomeFeedViewModel viewModel;
     private SwipeRefreshLayout refreshLayout;
-
     private ImageButton btnSearch;
     private LinearLayout searchContainer;
     private EditText etSearchUser;
     private RecyclerView recyclerSearchUsers;
     private UserSearchAdapter userSearchAdapter;
+
+    private View searchSpacer;
 
     private Call<PageResponse<UserSearchResponse>> searchCall;
 
@@ -90,6 +93,7 @@ public class HomeFragment extends Fragment {
 
     private void initSearch(View view) {
         btnSearch = view.findViewById(R.id.btnSearch);
+        searchSpacer = view.findViewById(R.id.searchSpacer);
         searchContainer = view.findViewById(R.id.searchContainer);
         etSearchUser = view.findViewById(R.id.etSearchUser);
         recyclerSearchUsers = view.findViewById(R.id.recyclerSearchUsers);
@@ -111,45 +115,82 @@ public class HomeFragment extends Fragment {
         etSearchUser.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // No necesitamos hacer nada aquí.
             }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String query = s.toString().trim();
 
-                if (query.length() < 2) {
+                if (query.isEmpty()) {
                     clearSearchResults();
                     return;
                 }
-
                 searchUsers(query);
             }
 
             @Override
             public void afterTextChanged(Editable s) {
-                // No necesitamos hacer nada aquí.
             }
         });
     }
 
     private void toggleSearch() {
-        if (searchContainer.getVisibility() == View.VISIBLE) {
+        if (etSearchUser.getVisibility() != View.VISIBLE) {
+            showSearch();
+            return;
+        }
+
+        String query = etSearchUser.getText().toString().trim();
+
+        if (query.isEmpty()) {
             hideSearch();
         } else {
-            showSearch();
+            searchUsers(query);
         }
     }
 
     private void showSearch() {
-        searchContainer.setVisibility(View.VISIBLE);
+        if (searchSpacer != null) {
+            searchSpacer.setVisibility(View.GONE);
+        }
+
+        etSearchUser.setVisibility(View.VISIBLE);
         etSearchUser.requestFocus();
+
+        etSearchUser.postDelayed(() -> {
+            if (!isAdded()) return;
+
+            InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+            if (imm != null) {
+                imm.showSoftInput(etSearchUser, InputMethodManager.SHOW_IMPLICIT);
+            }
+        }, 150);
     }
 
     private void hideSearch() {
-        searchContainer.setVisibility(View.GONE);
+        hideKeyboard();
+
+        etSearchUser.setVisibility(View.GONE);
         etSearchUser.setText("");
+
+        if (searchSpacer != null) {
+            searchSpacer.setVisibility(View.VISIBLE);
+        }
+
+        searchContainer.setVisibility(View.GONE);
         clearSearchResults();
+    }
+
+    private void hideKeyboard() {
+        if (!isAdded()) return;
+
+        InputMethodManager imm = (InputMethodManager)
+                requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        if (imm != null && etSearchUser != null) {
+            imm.hideSoftInputFromWindow(etSearchUser.getWindowToken(), 0);
+        }
     }
 
     private void clearSearchResults() {
@@ -163,6 +204,10 @@ public class HomeFragment extends Fragment {
 
         if (recyclerSearchUsers != null) {
             recyclerSearchUsers.setVisibility(View.GONE);
+        }
+
+        if (searchContainer != null) {
+            searchContainer.setVisibility(View.GONE);
         }
     }
 
@@ -189,12 +234,21 @@ public class HomeFragment extends Fragment {
 
                     if (users.isEmpty()) {
                         recyclerSearchUsers.setVisibility(View.GONE);
+                        searchContainer.setVisibility(View.GONE);
                     } else {
+                        searchContainer.setVisibility(View.VISIBLE);
                         recyclerSearchUsers.setVisibility(View.VISIBLE);
                     }
 
                 } else {
                     recyclerSearchUsers.setVisibility(View.GONE);
+                    searchContainer.setVisibility(View.GONE);
+
+                    Toast.makeText(
+                            requireContext(),
+                            "Search failed: " + response.code(),
+                            Toast.LENGTH_SHORT
+                    ).show();
                 }
             }
 
@@ -204,6 +258,8 @@ public class HomeFragment extends Fragment {
                 if (!isAdded()) return;
 
                 recyclerSearchUsers.setVisibility(View.GONE);
+                searchContainer.setVisibility(View.GONE);
+
                 Toast.makeText(requireContext(), "Search error", Toast.LENGTH_SHORT).show();
                 t.printStackTrace();
             }
