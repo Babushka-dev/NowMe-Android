@@ -3,6 +3,8 @@ package com.example.nowme.network;
 import com.example.nowme.PageResponse;
 import com.example.nowme.network.dto.AuthRequest;
 import com.example.nowme.network.dto.AuthResponse;
+import com.example.nowme.network.dto.CommentRequest;
+import com.example.nowme.network.dto.CommentResponse;
 import com.example.nowme.network.dto.NowmeResponse;
 import com.example.nowme.network.dto.RefreshRequest;
 import com.example.nowme.network.dto.UpdateAvatarRequest;
@@ -95,5 +97,18 @@ public interface NowmeApi {
             @Query("query") String query,
             @Query("page") int page,
             @Query("size") int size
+    );
+
+    @GET("/nowme/{id}/comment")
+    Call<PageResponse<CommentResponse>> getComments(
+            @Path("id") Long nowmeId,
+            @Query("page") int page,
+            @Query("size") int size
+    );
+
+    @POST("/nowme/{id}/comment")
+    Call<CommentResponse> createComment(
+            @Path("id") Long nowmeId,
+            @Body CommentRequest request
     );
 }
