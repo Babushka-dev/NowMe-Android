@@ -6,7 +6,7 @@
 
     <!-- Emoji -->
     <TextView
-        android:id="@+id/tvEmoji"
+        android:id="@+id/tvAvatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:gravity="center"
@@ -24,8 +24,8 @@
         android:textColor="@color/nowme_text_muted"
         android:textSize="12sp"
         android:textStyle="bold"
-        app:layout_constraintStart_toEndOf="@id/tvEmoji"
-        app:layout_constraintTop_toTopOf="@id/tvEmoji"
+        app:layout_constraintStart_toEndOf="@id/tvAvatar"
+        app:layout_constraintTop_toTopOf="@id/tvAvatar"
         android:layout_marginStart="8dp"/>
 
     <!-- Comments-->
