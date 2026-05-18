@@ -32,6 +32,8 @@ import com.example.nowme.network.dto.NowmeResponse;
 import com.example.nowme.network.dto.UpdateNowmeVisibilityRequest;
 import com.example.nowme.ui.main.MainActivity;
 import com.example.nowme.util.NowmeFeedInvalidationStore;
+import com.example.nowme.network.RetrofitClient;
+import com.example.nowme.util.NowmeCommentStateStore;
 import com.example.nowme.util.NowmeImageCache;
 import com.example.nowme.util.NowmeLikeStateStore;
 
@@ -101,6 +103,8 @@ public class NowmeActivity extends AppCompatActivity {
         }
 
         NowmeLikeStateStore.apply(nowme);
+        NowmeCommentStateStore.apply(nowme);
+
         liked = nowme.liked != null && nowme.liked;
         isOwner = Boolean.TRUE.equals(nowme.owner);
 
@@ -216,9 +220,7 @@ public class NowmeActivity extends AppCompatActivity {
             });
         });
 
-        btnComment.setOnClickListener(v ->
-                Toast.makeText(this, "Add comment", Toast.LENGTH_SHORT).show()
-        );
+        btnComment.setOnClickListener(v -> showAddCommentDialog());
     }
 
     private void openAuthorProfile() {
@@ -421,6 +423,21 @@ public class NowmeActivity extends AppCompatActivity {
             public void onFailure(Call<PageResponse<CommentResponse>> call, Throwable t) {
                 Toast.makeText(NowmeActivity.this, "Connection error loading comments", Toast.LENGTH_SHORT).show();
             }
+        });
+    }
+
+    private void showAddCommentDialog() {
+        if (nowme == null || nowme.id == null) return;
+
+        CommentDialogHelper.show(this, nowme.id, comment -> {
+            if (commentAdapter != null) {
+                commentAdapter.addItemAtTop(comment);
+            }
+
+            Long newCount = NowmeCommentStateStore.increase(nowme.id, nowme.comments);
+            nowme.comments = newCount;
+
+            tvNumComment.setText(String.valueOf(newCount));
         });
     }
 
