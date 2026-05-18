@@ -48,7 +48,7 @@ public class HomeFragment extends Fragment {
     private RecyclerView recyclerSearchUsers;
     private UserSearchAdapter userSearchAdapter;
 
-    private View searchSpacer;
+
 
     private Call<PageResponse<UserSearchResponse>> searchCall;
 
@@ -93,7 +93,6 @@ public class HomeFragment extends Fragment {
 
     private void initSearch(View view) {
         btnSearch = view.findViewById(R.id.btnSearch);
-        searchSpacer = view.findViewById(R.id.searchSpacer);
         searchContainer = view.findViewById(R.id.searchContainer);
         etSearchUser = view.findViewById(R.id.etSearchUser);
         recyclerSearchUsers = view.findViewById(R.id.recyclerSearchUsers);
@@ -135,51 +134,42 @@ public class HomeFragment extends Fragment {
     }
 
     private void toggleSearch() {
-        if (etSearchUser.getVisibility() != View.VISIBLE) {
-            showSearch();
-            return;
-        }
-
         String query = etSearchUser.getText().toString().trim();
 
         if (query.isEmpty()) {
-            hideSearch();
+            clearSearchResults();
+            etSearchUser.requestFocus();
+            showKeyboard();
         } else {
             searchUsers(query);
         }
     }
 
     private void showSearch() {
-        if (searchSpacer != null) {
-            searchSpacer.setVisibility(View.GONE);
-        }
-
-        etSearchUser.setVisibility(View.VISIBLE);
         etSearchUser.requestFocus();
-
-        etSearchUser.postDelayed(() -> {
-            if (!isAdded()) return;
-
-            InputMethodManager imm = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-
-            if (imm != null) {
-                imm.showSoftInput(etSearchUser, InputMethodManager.SHOW_IMPLICIT);
-            }
-        }, 150);
+        showKeyboard();
     }
 
     private void hideSearch() {
         hideKeyboard();
-
-        etSearchUser.setVisibility(View.GONE);
         etSearchUser.setText("");
-
-        if (searchSpacer != null) {
-            searchSpacer.setVisibility(View.VISIBLE);
-        }
-
-        searchContainer.setVisibility(View.GONE);
         clearSearchResults();
+    }
+
+    private void showKeyboard() {
+        if (!isAdded()) return;
+
+        etSearchUser.postDelayed(() -> {
+            if (!isAdded()) return;
+
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager)
+                            requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+
+            if (imm != null) {
+                imm.showSoftInput(etSearchUser, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            }
+        }, 150);
     }
 
     private void hideKeyboard() {
