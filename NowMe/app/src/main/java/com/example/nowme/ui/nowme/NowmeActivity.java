@@ -20,19 +20,26 @@ import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.nowme.PageResponse;
 import com.example.nowme.R;
+import com.example.nowme.network.dto.CommentResponse;
 import com.example.nowme.network.RetrofitClient;
 import com.example.nowme.network.dto.NowmeResponse;
 import com.example.nowme.network.dto.UpdateNowmeVisibilityRequest;
 import com.example.nowme.ui.main.MainActivity;
 import com.example.nowme.util.NowmeFeedInvalidationStore;
+import com.example.nowme.network.RetrofitClient;
+import com.example.nowme.util.NowmeCommentStateStore;
 import com.example.nowme.util.NowmeImageCache;
 import com.example.nowme.util.NowmeLikeStateStore;
 
 import java.io.Serializable;
+import java.util.List;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -49,8 +56,8 @@ public class NowmeActivity extends AppCompatActivity {
     boolean favoriteRequestInFlight = false;
     boolean isOwner;
     NowmeResponse nowme;
-
     RecyclerView rvComments;
+    CommentAdapter commentAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +85,16 @@ public class NowmeActivity extends AppCompatActivity {
         imgNowMe = findViewById(R.id.imgNowMe);
         rvComments = findViewById(R.id.rvComments);
 
+        commentAdapter = new CommentAdapter(comment -> {
+            if (comment.userId != null) {
+                openProfile(comment.userId);
+            }
+        });
+
+        rvComments.setLayoutManager(new LinearLayoutManager(this));
+        rvComments.setAdapter(commentAdapter);
+        rvComments.setNestedScrollingEnabled(false);
+
         nowme = (NowmeResponse) getIntent().getSerializableExtra("nowme");
 
         if (nowme == null) {
@@ -86,6 +103,8 @@ public class NowmeActivity extends AppCompatActivity {
         }
 
         NowmeLikeStateStore.apply(nowme);
+        NowmeCommentStateStore.apply(nowme);
+
         liked = nowme.liked != null && nowme.liked;
         isOwner = Boolean.TRUE.equals(nowme.owner);
 
@@ -130,6 +149,7 @@ public class NowmeActivity extends AppCompatActivity {
 
         if (nowme.id != null) {
             NowmeImageCache.load(nowme.id, bitmap -> imgNowMe.setImageBitmap(bitmap));
+            loadComments();
         }
 
         btnClose.setOnClickListener(v -> finish());
@@ -200,9 +220,7 @@ public class NowmeActivity extends AppCompatActivity {
             });
         });
 
-        btnComment.setOnClickListener(v ->
-                Toast.makeText(this, "Add comment", Toast.LENGTH_SHORT).show()
-        );
+        btnComment.setOnClickListener(v -> showAddCommentDialog());
     }
 
     private void openAuthorProfile() {
@@ -384,5 +402,52 @@ public class NowmeActivity extends AppCompatActivity {
 
     private String visibilityLabel(String visibility) {
         return "FRIENDS_ONLY".equals(visibility) ? "Friends" : "Public";
+    }
+
+    private void loadComments() {
+        if (nowme == null || nowme.id == null) return;
+
+        RetrofitClient.getApi().getComments(nowme.id, 0, 20).enqueue(new Callback<PageResponse<CommentResponse>>() {
+            @Override
+            public void onResponse(Call<PageResponse<CommentResponse>> call, Response<PageResponse<CommentResponse>> response) {
+                if (!response.isSuccessful() || response.body() == null) {
+                    Toast.makeText(NowmeActivity.this, "Error loading comments", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                List<CommentResponse> comments = response.body().content;
+                commentAdapter.setItems(comments);
+            }
+
+            @Override
+            public void onFailure(Call<PageResponse<CommentResponse>> call, Throwable t) {
+                Toast.makeText(NowmeActivity.this, "Connection error loading comments", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showAddCommentDialog() {
+        if (nowme == null || nowme.id == null) return;
+
+        CommentDialogHelper.show(this, nowme.id, comment -> {
+            if (commentAdapter != null) {
+                commentAdapter.addItemAtTop(comment);
+            }
+
+            Long newCount = NowmeCommentStateStore.increase(nowme.id, nowme.comments);
+            nowme.comments = newCount;
+
+            tvNumComment.setText(String.valueOf(newCount));
+        });
+    }
+
+    private void openProfile(Long userId) {
+        if (userId == null) return;
+
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra(MainActivity.EXTRA_PROFILE_USER_ID, userId);
+        startActivity(intent);
+        finish();
     }
 }

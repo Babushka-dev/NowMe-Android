@@ -16,7 +16,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.nowme.R;
 import com.example.nowme.network.RetrofitClient;
 import com.example.nowme.network.dto.NowmeResponse;
+import com.example.nowme.ui.nowme.CommentDialogHelper;
 import com.example.nowme.ui.nowme.NowmeActivity;
+import com.example.nowme.util.NowmeCommentStateStore;
 import com.example.nowme.util.NowmeImageCache;
 import com.example.nowme.util.NowmeLikeStateStore;
 
@@ -60,6 +62,10 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         for (NowmeResponse item : items) {
             NowmeLikeStateStore.apply(item);
             NowmeLikeStateStore.remember(item);
+
+            NowmeCommentStateStore.apply(item);
+            NowmeCommentStateStore.remember(item);
+
             String dateLabel = formatDateLabel(item.creationTime);
             if (!dateLabel.equals(lastDateLabel)) {
                 rows.add(new DateHeaderRow(dateLabel));
@@ -71,10 +77,13 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         notifyDataSetChanged();
     }
 
-    public void syncLikeStates() {
+    public void syncStates() {
         for (RowItem row : rows) {
             if (row instanceof PostRow) {
-                NowmeLikeStateStore.apply(((PostRow) row).item);
+                NowmeResponse item = ((PostRow) row).item;
+
+                NowmeLikeStateStore.apply(item);
+                NowmeCommentStateStore.apply(item);
             }
         }
         notifyDataSetChanged();
@@ -160,6 +169,9 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
         postHolder.likeButton.setOnClickListener(v -> toggleLike(item, postHolder.likeButton));
 
+        postHolder.commentButton.setEnabled(item.id != null);
+        postHolder.commentButton.setOnClickListener(v -> showAddCommentDialog(item, postHolder));
+
         if (item.id == null) return;
 
         postHolder.image.setTag(item.id);
@@ -205,6 +217,23 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
                 }
                 updateLikeState(item, likeButton, wasLiked, item.likes);
                 Toast.makeText(likeButton.getContext(), "Like error", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showAddCommentDialog(NowmeResponse item, PostViewHolder holder) {
+        if (item == null || item.id == null) return;
+
+        CommentDialogHelper.show(holder.itemView.getContext(), item.id, comment -> {
+            Long newCount = NowmeCommentStateStore.increase(item.id, item.comments);
+            item.comments = newCount;
+
+            int position = holder.getBindingAdapterPosition();
+
+            if (position != RecyclerView.NO_POSITION) {
+                notifyItemChanged(position);
+            } else {
+                notifyDataSetChanged();
             }
         });
     }
@@ -308,6 +337,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         final TextView username;
         final ImageView image;
         final ImageButton likeButton;
+        final ImageButton commentButton;
 
         PostViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -315,6 +345,7 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
             username = itemView.findViewById(R.id.tvUsername);
             image = itemView.findViewById(R.id.imgNowMe);
             likeButton = itemView.findViewById(R.id.btnLike);
+            commentButton = itemView.findViewById(R.id.btnComment);
         }
     }
 }

@@ -1,13 +1,22 @@
 package com.example.nowme.ui.home;
 
+import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModel;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.Navigation;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
@@ -18,6 +27,7 @@ import com.example.nowme.network.RetrofitClient;
 import com.example.nowme.network.dto.NowmeResponse;
 import com.example.nowme.ui.main.MainActivity;
 import com.example.nowme.util.NowmeFeedInvalidationStore;
+import com.example.nowme.network.dto.UserSearchResponse;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,6 +42,15 @@ public class HomeFragment extends Fragment {
     private FeedAdapter adapter;
     private HomeFeedViewModel viewModel;
     private SwipeRefreshLayout refreshLayout;
+    private ImageButton btnSearch;
+    private LinearLayout searchContainer;
+    private EditText etSearchUser;
+    private RecyclerView recyclerSearchUsers;
+    private UserSearchAdapter userSearchAdapter;
+
+
+
+    private Call<PageResponse<UserSearchResponse>> searchCall;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -41,18 +60,8 @@ public class HomeFragment extends Fragment {
 
         viewModel = new ViewModelProvider(requireActivity()).get(HomeFeedViewModel.class);
 
-        refreshLayout = view.findViewById(R.id.homeRefresh);
-        refreshLayout.setOnRefreshListener(() -> loadFeed(true));
-
-        recyclerView = view.findViewById(R.id.recyclerFeed);
-        adapter = new FeedAdapter(userId -> {
-            if (getActivity() instanceof MainActivity) {
-                ((MainActivity) getActivity()).openUserProfile(userId);
-            }
-        });
-
-        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
-        recyclerView.setAdapter(adapter);
+        initFeed(view);
+        initSearch(view);
 
         if (viewModel.items != null) {
             adapter.setItems(viewModel.items);
@@ -66,6 +75,187 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
+    private void initFeed(View view) {
+        refreshLayout = view.findViewById(R.id.homeRefresh);
+        refreshLayout.setOnRefreshListener(() -> loadFeed(true));
+
+        recyclerView = view.findViewById(R.id.recyclerFeed);
+
+        adapter = new FeedAdapter(userId -> {
+            Bundle args = new Bundle();
+            args.putLong("userId", userId);
+            Navigation.findNavController(view).navigate(R.id.profileFragment, args);
+        });
+
+        recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        recyclerView.setAdapter(adapter);
+    }
+
+    private void initSearch(View view) {
+        btnSearch = view.findViewById(R.id.btnSearch);
+        searchContainer = view.findViewById(R.id.searchContainer);
+        etSearchUser = view.findViewById(R.id.etSearchUser);
+        recyclerSearchUsers = view.findViewById(R.id.recyclerSearchUsers);
+
+        userSearchAdapter = new UserSearchAdapter(userId -> {
+            Bundle args = new Bundle();
+            args.putLong("userId", userId);
+
+            hideSearch();
+
+            Navigation.findNavController(view).navigate(R.id.profileFragment, args);
+        });
+
+        recyclerSearchUsers.setLayoutManager(new LinearLayoutManager(getContext()));
+        recyclerSearchUsers.setAdapter(userSearchAdapter);
+
+        btnSearch.setOnClickListener(v -> toggleSearch());
+
+        etSearchUser.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+
+                if (query.isEmpty()) {
+                    clearSearchResults();
+                    return;
+                }
+                searchUsers(query);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+            }
+        });
+    }
+
+    private void toggleSearch() {
+        String query = etSearchUser.getText().toString().trim();
+
+        if (query.isEmpty()) {
+            clearSearchResults();
+            etSearchUser.requestFocus();
+            showKeyboard();
+        } else {
+            searchUsers(query);
+        }
+    }
+
+    private void showSearch() {
+        etSearchUser.requestFocus();
+        showKeyboard();
+    }
+
+    private void hideSearch() {
+        hideKeyboard();
+        etSearchUser.setText("");
+        clearSearchResults();
+    }
+
+    private void showKeyboard() {
+        if (!isAdded()) return;
+
+        etSearchUser.postDelayed(() -> {
+            if (!isAdded()) return;
+
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager)
+                            requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+
+            if (imm != null) {
+                imm.showSoftInput(etSearchUser, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            }
+        }, 150);
+    }
+
+    private void hideKeyboard() {
+        if (!isAdded()) return;
+
+        InputMethodManager imm = (InputMethodManager)
+                requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+
+        if (imm != null && etSearchUser != null) {
+            imm.hideSoftInputFromWindow(etSearchUser.getWindowToken(), 0);
+        }
+    }
+
+    private void clearSearchResults() {
+        if (searchCall != null) {
+            searchCall.cancel();
+        }
+
+        if (userSearchAdapter != null) {
+            userSearchAdapter.clear();
+        }
+
+        if (recyclerSearchUsers != null) {
+            recyclerSearchUsers.setVisibility(View.GONE);
+        }
+
+        if (searchContainer != null) {
+            searchContainer.setVisibility(View.GONE);
+        }
+    }
+
+    private void searchUsers(String query) {
+        if (searchCall != null) {
+            searchCall.cancel();
+        }
+
+        searchCall = RetrofitClient.getApi().searchUsers(query, 0, 10);
+
+        searchCall.enqueue(new Callback<PageResponse<UserSearchResponse>>() {
+            @Override
+            public void onResponse(Call<PageResponse<UserSearchResponse>> call,
+                                   Response<PageResponse<UserSearchResponse>> response) {
+
+                if (!isAdded()) return;
+
+                if (response.isSuccessful() && response.body() != null) {
+                    List<UserSearchResponse> users = response.body().content != null
+                            ? response.body().content
+                            : Collections.emptyList();
+
+                    userSearchAdapter.setUsers(users);
+
+                    if (users.isEmpty()) {
+                        recyclerSearchUsers.setVisibility(View.GONE);
+                        searchContainer.setVisibility(View.GONE);
+                    } else {
+                        searchContainer.setVisibility(View.VISIBLE);
+                        recyclerSearchUsers.setVisibility(View.VISIBLE);
+                    }
+
+                } else {
+                    recyclerSearchUsers.setVisibility(View.GONE);
+                    searchContainer.setVisibility(View.GONE);
+
+                    Toast.makeText(
+                            requireContext(),
+                            "Search failed: " + response.code(),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<PageResponse<UserSearchResponse>> call, Throwable t) {
+                if (call.isCanceled()) return;
+                if (!isAdded()) return;
+
+                recyclerSearchUsers.setVisibility(View.GONE);
+                searchContainer.setVisibility(View.GONE);
+
+                Toast.makeText(requireContext(), "Search error", Toast.LENGTH_SHORT).show();
+                t.printStackTrace();
+            }
+        });
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -74,7 +264,7 @@ public class HomeFragment extends Fragment {
             return;
         }
         if (adapter != null) {
-            adapter.syncLikeStates();
+            adapter.syncStates();
         }
     }
 
@@ -82,6 +272,10 @@ public class HomeFragment extends Fragment {
     public void onPause() {
         super.onPause();
         saveScrollPosition();
+
+        if (searchCall != null) {
+            searchCall.cancel();
+        }
     }
 
     private void loadFeed(boolean forceRefresh) {
@@ -89,7 +283,9 @@ public class HomeFragment extends Fragment {
         if (!forceRefresh && viewModel.loaded) return;
 
         viewModel.loading = true;
+
         Call<PageResponse<NowmeResponse>> call = RetrofitClient.getApi().getNowmes();
+
         call.enqueue(new Callback<PageResponse<NowmeResponse>>() {
             @Override
             public void onResponse(Call<PageResponse<NowmeResponse>> call,
@@ -101,8 +297,10 @@ public class HomeFragment extends Fragment {
                     List<NowmeResponse> list = response.body().content != null
                             ? response.body().content
                             : Collections.emptyList();
+
                     viewModel.items = list;
                     viewModel.loaded = true;
+
                     if (adapter != null) {
                         adapter.setItems(list);
                     }
@@ -126,19 +324,25 @@ public class HomeFragment extends Fragment {
 
     private void saveScrollPosition() {
         if (recyclerView == null) return;
+
         LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
         if (layoutManager == null) return;
 
         int position = layoutManager.findFirstVisibleItemPosition();
         View firstItem = layoutManager.findViewByPosition(position);
+
         viewModel.scrollPosition = Math.max(position, 0);
-        viewModel.scrollOffset = firstItem != null ? firstItem.getTop() - recyclerView.getPaddingTop() : 0;
+        viewModel.scrollOffset = firstItem != null
+                ? firstItem.getTop() - recyclerView.getPaddingTop()
+                : 0;
     }
 
     private void restoreScrollPosition() {
         recyclerView.post(() -> {
             if (recyclerView == null) return;
+
             LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+
             if (layoutManager != null) {
                 layoutManager.scrollToPositionWithOffset(
                         viewModel.scrollPosition,

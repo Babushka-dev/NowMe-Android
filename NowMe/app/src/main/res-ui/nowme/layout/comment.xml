@@ -6,7 +6,7 @@
 
     <!-- Emoji -->
     <TextView
-        android:id="@+id/tvEmoji"
+        android:id="@+id/tvAvatar"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:gravity="center"
@@ -17,15 +17,15 @@
 
     <!-- Username -->
     <TextView
-        android:id="@+id/tvUser"
+        android:id="@+id/tvUsername"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="username"
         android:textColor="@color/nowme_text_muted"
         android:textSize="12sp"
         android:textStyle="bold"
-        app:layout_constraintStart_toEndOf="@id/tvEmoji"
-        app:layout_constraintTop_toTopOf="@id/tvEmoji"
+        app:layout_constraintStart_toEndOf="@id/tvAvatar"
+        app:layout_constraintTop_toTopOf="@id/tvAvatar"
         android:layout_marginStart="8dp"/>
 
     <!-- Comments-->
@@ -36,8 +36,8 @@
         android:text="Comment..."
         android:textColor="@color/nowme_text_primary"
         android:textSize="16sp"
-        app:layout_constraintStart_toStartOf="@id/tvUser"
-        app:layout_constraintTop_toBottomOf="@id/tvUser"
+        app:layout_constraintStart_toStartOf="@id/tvUsername"
+        app:layout_constraintTop_toBottomOf="@id/tvUsername"
         app:layout_constraintEnd_toEndOf="parent"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
