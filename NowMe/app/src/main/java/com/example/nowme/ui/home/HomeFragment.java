@@ -274,7 +274,7 @@ public class HomeFragment extends Fragment {
             return;
         }
         if (adapter != null) {
-            adapter.syncLikeStates();
+            adapter.syncStates();
         }
     }
 
