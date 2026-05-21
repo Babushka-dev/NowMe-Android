@@ -12,8 +12,8 @@ The app is not a static prototype. It talks to a real backend API, stores authen
 
 ## Project Pair
 
-- **NowMe Android**: the mobile app in this repository.
-- **NowMe Spring**: the backend REST API used by the Android app.
+- [**NowMe Android**](https://github.com/abi4ka/NowMe-Android): the mobile app in this repository.
+- [**NowMe Spring**](https://github.com/abi4ka/NowMe-Spring): the backend REST API used by the Android app.
 
 By default, the app connects to the local backend at:
 
@@ -86,7 +86,7 @@ This address is used for the Android emulator to reach the Spring server running
 
 ## Running Locally
 
-1. Start the NowMe Spring server.
+1. Start the [NowMe Spring](https://github.com/abi4ka/NowMe-Spring) server.
 2. Open `NowMe/` in Android Studio.
 3. Build and run the app on an emulator or device.
 4. If you use an emulator, keep the default backend URL:
