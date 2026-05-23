@@ -57,13 +57,18 @@ public class PublishActivity extends AppCompatActivity {
         });
 
         String uriString = getIntent().getStringExtra("imageUri");
+        if (uriString == null) {
+            Toast.makeText(this, "Image required", Toast.LENGTH_SHORT).show();
+            closeWithSlideDown();
+            return;
+        }
         imageUri = Uri.parse(uriString);
 
         try {
             imagePreview.setImageBitmap(ImageOrientationUtils.decodeUprightBitmap(
                     getContentResolver().openInputStream(imageUri)
             ));
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             imagePreview.setImageURI(imageUri);
         }
 

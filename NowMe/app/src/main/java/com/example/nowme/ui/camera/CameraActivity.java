@@ -9,6 +9,7 @@ import android.view.Surface;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.camera.core.AspectRatio;
 import androidx.activity.result.ActivityResultLauncher;
@@ -27,9 +28,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.example.nowme.R;
+import com.example.nowme.util.ImageOrientationUtils;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.File;
+import java.io.IOException;
 
 public class CameraActivity extends AppCompatActivity {
 
@@ -162,10 +165,24 @@ public class CameraActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.GetContent(), uri -> {
 
                 if (uri != null) {
-                    goToPublishActivity(uri);
+                    try {
+                        goToPublishActivity(copyGalleryImageToCache(uri));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Toast.makeText(this, "File error", Toast.LENGTH_SHORT).show();
+                    }
                 }
 
             });
+
+    private Uri copyGalleryImageToCache(Uri uri) throws IOException {
+        File photoFile = new File(
+                getCacheDir(),
+                "gallery_photo_" + System.currentTimeMillis() + ".jpg"
+        );
+        ImageOrientationUtils.writeUprightJpeg(this, uri, photoFile);
+        return Uri.fromFile(photoFile);
+    }
 
     private void goToPublishActivity(Uri uri) {
 

@@ -22,7 +22,12 @@ public final class ImageOrientationUtils {
     }
 
     public static File writeUprightJpeg(Context context, Uri uri, File outputFile) throws IOException {
-        byte[] imageBytes = readBytes(context.getContentResolver().openInputStream(uri));
+        byte[] imageBytes;
+        try {
+            imageBytes = readBytes(context.getContentResolver().openInputStream(uri));
+        } catch (SecurityException e) {
+            throw new IOException("No permission to read image", e);
+        }
         Bitmap bitmap = decodeUprightBitmap(imageBytes);
         if (bitmap == null) {
             throw new IOException("Unable to decode image");
