@@ -22,12 +22,8 @@ import com.example.nowme.util.NowmeCommentStateStore;
 import com.example.nowme.util.NowmeImageCache;
 import com.example.nowme.util.NowmeLikeStateStore;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,8 +37,6 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
     private static final int VIEW_TYPE_DATE_HEADER = 0;
     private static final int VIEW_TYPE_POST = 1;
-    private static final DateTimeFormatter FALLBACK_DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final List<RowItem> rows = new ArrayList<>();
     private final OnAuthorClickListener onAuthorClickListener;
@@ -277,27 +271,10 @@ public class FeedAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         String value = creationTime.trim();
 
         try {
-            return OffsetDateTime.parse(value).toLocalDate();
-        } catch (Exception ignored) {
-        }
-        try {
-            return Instant.parse(value).atZone(ZoneId.systemDefault()).toLocalDate();
-        } catch (Exception ignored) {
-        }
-        try {
             return LocalDateTime.parse(value).toLocalDate();
         } catch (Exception ignored) {
+            return null;
         }
-        try {
-            return LocalDate.parse(value);
-        } catch (Exception ignored) {
-        }
-        try {
-            return LocalDateTime.parse(value, FALLBACK_DATE_TIME_FORMATTER).toLocalDate();
-        } catch (Exception ignored) {
-        }
-
-        return null;
     }
 
     private interface RowItem {

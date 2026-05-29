@@ -24,12 +24,9 @@ import com.example.nowme.network.RetrofitClient;
 import com.example.nowme.network.dto.NowmeResponse;
 import com.example.nowme.util.NowmeImageCache;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -44,9 +41,6 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class CalendarHistoryActivity extends AppCompatActivity {
-
-    private static final DateTimeFormatter FALLBACK_DATE_TIME_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private LinearLayout monthContainer;
     private ScrollView calendarScroll;
@@ -271,27 +265,10 @@ public class CalendarHistoryActivity extends AppCompatActivity {
         String value = creationTime.trim();
 
         try {
-            return OffsetDateTime.parse(value).toLocalDate();
-        } catch (Exception ignored) {
-        }
-        try {
-            return Instant.parse(value).atZone(java.time.ZoneId.systemDefault()).toLocalDate();
-        } catch (Exception ignored) {
-        }
-        try {
             return LocalDateTime.parse(value).toLocalDate();
         } catch (Exception ignored) {
+            return null;
         }
-        try {
-            return LocalDate.parse(value);
-        } catch (Exception ignored) {
-        }
-        try {
-            return LocalDateTime.parse(value, FALLBACK_DATE_TIME_FORMATTER).toLocalDate();
-        } catch (Exception ignored) {
-        }
-
-        return null;
     }
 
     private int dp(int value) {

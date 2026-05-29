@@ -37,7 +37,9 @@ import com.example.nowme.util.NowmeCommentStateStore;
 import com.example.nowme.util.NowmeImageCache;
 import com.example.nowme.util.NowmeLikeStateStore;
 
-import java.io.Serializable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import retrofit2.Call;
@@ -45,6 +47,8 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class NowmeActivity extends AppCompatActivity {
+
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     ImageButton btnClose, btnMenu, btnLike, btnComment;
     TextView tvNumLike, tvNumComment, tvUsername, tvDescription, tvDate, tvEmoji;
@@ -121,31 +125,8 @@ public class NowmeActivity extends AppCompatActivity {
         tvUsername.setOnClickListener(v -> openAuthorProfile());
         tvEmoji.setOnClickListener(v -> openAuthorProfile());
 
-        //upgrade date
-        try {
-            String value = nowme.creationTime;
-
-            java.time.LocalDate date;
-
-            try {
-                date = java.time.OffsetDateTime.parse(value).toLocalDate();
-            } catch (Exception e1) {
-                try {
-                    date = java.time.LocalDateTime.parse(value).toLocalDate();
-                } catch (Exception e2) {
-                    date = java.time.LocalDate.parse(value);
-                }
-            }
-
-            String formatted = date.format(
-                    java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")
-            );
-
-            tvDate.setText(formatted);
-
-        } catch (Exception e) {
-            tvDate.setText("-- / -- / --");
-        }
+        LocalDate creationDate = parseCreationDate(nowme.creationTime);
+        tvDate.setText(creationDate != null ? creationDate.format(DATE_FORMATTER) : "-- / -- / --");
 
         if (nowme.id != null) {
             NowmeImageCache.load(nowme.id, bitmap -> imgNowMe.setImageBitmap(bitmap));
@@ -231,6 +212,16 @@ public class NowmeActivity extends AppCompatActivity {
         intent.putExtra(MainActivity.EXTRA_PROFILE_USER_ID, nowme.userId);
         startActivity(intent);
         finish();
+    }
+
+    private LocalDate parseCreationDate(String creationTime) {
+        if (creationTime == null || creationTime.trim().isEmpty()) return null;
+
+        try {
+            return LocalDateTime.parse(creationTime.trim()).toLocalDate();
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private void showNowmeMenu() {
