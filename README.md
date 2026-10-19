@@ -12,8 +12,8 @@ The app is not a static prototype. It talks to a real backend API, stores authen
 
 ## Project Pair
 
-- [**NowMe Android**](https://github.com/abi4ka/NowMe-Android): the mobile app in this repository.
-- [**NowMe Spring**](https://github.com/abi4ka/NowMe-Spring): the backend REST API used by the Android app.
+- [**NowMe Android**](https://github.com/Babushka-dev/NowMe-Android): the mobile app in this repository.
+- [**NowMe Spring**](https://github.com/Babushka-dev/NowMe-Spring): the backend REST API used by the Android app.
 
 By default, the app connects to the local backend at:
 
